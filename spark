@@ -220,3 +220,6 @@ accum = sc.accumulator(0)
 10
 
 
+textFile.saveAsTextFile("file:///usr/local/spark/mycode/wordcount/writeback.txt")
+save as a dir, next time, just use writeback.txt as textFile input is ok
+
