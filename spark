@@ -251,3 +251,85 @@ Spark Streaming构建在Spark上，一方面是因为Spark的低延迟执行引�
 
 
 
+Spark streaming:
+当执行一个应用时，任务控制节点会向集群管理器（Cluster Manager）申请资源，启动Executor，并向Executor发送应用程序代码和文件
+，然后在Executor上执行task。
+在Spark Streaming中，会有一个组件Receiver，作为一个长期运行的task跑在一个Executor上。
+每个Receiver都会负责一个input DStream（比如从文件中读取数据的文件流，比如套接字流，或者从Kafka中读取的一个输入流等等）。
+Spark Streaming通过input DStream与外部数据源进行连接，读取相关数据
+
+编写Spark Streaming程序的基本步骤是：
+1.通过创建输入DStream来定义输入源
+2.通过对DStream应用转换操作和输出操作来定义流计算。
+3.用streamingContext.start()来开始接收数据和处理流程。
+4.通过streamingContext.awaitTermination()方法来等待处理结束（手动结束或因为错误而结束）。
+5.可以通过streamingContext.stop()来手动结束流计算进程。
+
+DStream转换操作包括无状态转换和有状态转换。
+无状态转换：每个批次的处理不依赖于之前批次的数据。
+有状态转换：当前批次的处理需要使用之前批次的数据或者中间结果。有状态转换包括基于滑动窗口的转换和追踪状态变化的转换(updateStateByKey)。
+
+DStream无状态转换操作
+
+map(func) ：对源DStream的每个元素，采用func函数进行转换，得到一个新的DStream；
+* flatMap(func)： 与map相似，但是每个输入项可用被映射为0个或者多个输出项；
+* filter(func)： 返回一个新的DStream，仅包含源DStream中满足函数func的项；
+* repartition(numPartitions)： 通过创建更多或者更少的分区改变DStream的并行程度；
+* union(otherStream)： 返回一个新的DStream，包含源DStream和其他DStream的元素；
+* count()：统计源DStream中每个RDD的元素数量；
+* reduce(func)：利用函数func聚集源DStream中每个RDD的元素，返回一个包含单元素RDDs的新DStream；
+* countByValue()：应用于元素类型为K的DStream上，返回一个（K，V）键值对类型的新DStream，每个键的值是在原DStream的每个RDD中的出现次数；
+* reduceByKey(func, [numTasks])：当在一个由(K,V)键值对组成的DStream上执行该操作时，返回一个新的由(K,V)键值对组成的DStream，每一个key的值均由给定的recuce函数（func）聚集起来；
+* join(otherStream, [numTasks])：当应用于两个DStream（一个包含（K,V）键值对,一个包含(K,W)键值对），返回一个包含(K, (V, W))键值对的新DStream；
+* cogroup(otherStream, [numTasks])：当应用于两个DStream（一个包含（K,V）键值对,一个包含(K,W)键值对），返回一个包含(K, Seq[V], Seq[W])的元组；
+* transform(func)：通过对源DStream的每个RDD应用RDD-to-RDD函数，创建一个新的DStream。支持在新的DStream中做任何RDD操作。
+
+DStream有状态转换操作
+
+下面给给出一些窗口转换操作的含义：
+* window(windowLength, slideInterval) 基于源DStream产生的窗口化的批数据，计算得到一个新的DStream；
+* countByWindow(windowLength, slideInterval) 返回流中元素的一个滑动窗口数；
+* reduceByWindow(func, windowLength, slideInterval) 返回一个单元素流。利用函数func聚集滑动时间间隔的流的元素创建这个单元素流。函数func必须满足结合律，从而可以支持并行计算；
+* reduceByKeyAndWindow(func, windowLength, slideInterval, [numTasks]) 应用到一个(K,V)键值对组成的DStream上时，会返回一个由(K,V)键值对组成的新的DStream。每一个key的值均由给定的reduce函数(func函数)进行聚合计算。注意：在默认情况下，这个算子利用了Spark默认的并发任务数去分组。可以通过numTasks参数的设置来指定不同的任务数；
+* reduceByKeyAndWindow(func, invFunc, windowLength, slideInterval, [numTasks]) 更加高效的reduceByKeyAndWindow，每个窗口的reduce值，是基于先前窗口的reduce值进行增量计算得到的；它会对进入滑动窗口的新数据进行reduce操作，并对离开窗口的老数据进行“逆向reduce”操作。但是，只能用于“可逆reduce函数”，即那些reduce函数都有一个对应的“逆向reduce函数”（以InvFunc参数传入）；
+* countByValueAndWindow(windowLength, slideInterval, [numTasks]) 当应用到一个(K,V)键值对组成的DStream上，返回一个由(K,V)键值对组成的新的DStream。每个key的值都是它们在滑动窗口中出现的频率。
+
+updateStateByKey操作
+当我们需要在跨批次之间维护状态时，就必须使用updateStateByKey操作。
+
+m __future__ import print_function
+ 
+import sys
+ 
+from pyspark import SparkContext
+from pyspark.streaming import StreamingContext
+ 
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: stateful_network_wordcount.py <hostname> <port>", file=sys.stderr)
+        exit(-1)
+    sc = SparkContext(appName="PythonStreamingStatefulNetworkWordCount")
+    ssc = StreamingContext(sc, 1)
+    ssc.checkpoint("file:///usr/local/spark/mycode/streaming/")
+ 
+    # RDD with initial state (key, value) pairs
+    initialStateRDD = sc.parallelize([(u'hello', 1), (u'world', 1)])
+ 
+    def updateFunc(new_values, last_sum):
+        return sum(new_values) + (last_sum or 0)
+ 
+    lines = ssc.socketTextStream(sys.argv[1], int(sys.argv[2]))
+    running_counts = lines.flatMap(lambda line: line.split(" "))\
+                          .map(lambda word: (word, 1))\
+                          .updateStateByKey(updateFunc, initialRDD=initialStateRDD)
+ 
+    running_counts.pprint()
+ 
+    ssc.start()
+    ssc.awaitTermination()
+    
+ Spark Streaming的updateStateByKey可以把DStream中的数据按key做reduce操作，然后对各个批次的数据进行累加。
+ 注意，wordDstream.updateStateByKeyInt每次传递给updateFunc函数两个参数，
+ 其中，第一个参数是某个key（即某个单词）的当前批次的一系列值的列表 ,updateFunc函数中 sum(new_values)，就是计算这个被传递进来的与某个key对应的当前批次的所有值的总和，也就是当前批次某个单词的出现次数。
+ 传递给updateFunc函数的第二个参数是某个key的历史状态信息，也就是某个单词历史批次的词频汇总结果。
+ 
