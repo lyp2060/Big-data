@@ -322,7 +322,7 @@ if __name__ == "__main__":
     running_counts = lines.flatMap(lambda line: line.split(" "))\
                           .map(lambda word: (word, 1))\
                           .updateStateByKey(updateFunc, initialRDD=initialStateRDD)
- 
+    running_counts.saveAsTextFiles("file:///usr/local/spark/mycode/streaming/output.txt")
     running_counts.pprint()
  
     ssc.start()
