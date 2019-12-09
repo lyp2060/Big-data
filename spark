@@ -333,3 +333,28 @@ if __name__ == "__main__":
  其中，第一个参数是某个key（即某个单词）的当前批次的一系列值的列表 ,updateFunc函数中 sum(new_values)，就是计算这个被传递进来的与某个key对应的当前批次的所有值的总和，也就是当前批次某个单词的出现次数。
  传递给updateFunc函数的第二个参数是某个key的历史状态信息，也就是某个单词历史批次的词频汇总结果。
  
+
+Spark SQL:
+firt map to logic plan, then optimize to physical plan 
+Use off-heap memoriyes to interact with encoder (SerDes, serialization and deserialization). 
+Use Catalyst Query optmizer, it is an execution-agnostic framework. tree style. 
+An encoder provides conversion between tabular representation and JVM objects. With the help of the encoder, we serialize the object. Encoder serializes objects for processing or transmitting over the network encoders.
+
+SparkSession is the entry point to the SparkSQL. 
+
+
+RDD – RDD is a distributed collection of data elements spread across many machines in the cluster. RDDs are a set of Java or Scala objects representing data.
+DataFrame – A DataFrame is a distributed collection of data organized into named columns. It is conceptually equal to a table in a relational database.
+DataSet – It is an extension of DataFrame API that provides the functionality of – type-safe, object-oriented programming interface of the RDD API and performance benefits of the Catalyst query optimizer and off heap storage mechanism of a DataFrame API.
+
+Spark stream
+Instead of processing the streaming data one record at a time, Spark Streaming discretizes the data into tiny, sub-second micro-batches. In other words, Spark Streaming receivers accept data in parallel and buffer it in the memory of Spark’s workers nodes. Then the latency-optimized Spark engine runs short tasks to process the batches and output the results to other systems.
+Unlike the traditional continuous operator model, where the computation is statically allocated to a node, Spark tasks are assigned to the workers dynamically on the basis of data locality and available resources. This enables better load balancing and faster fault recovery.
+Each batch of data is a Resilient Distributed Dataset (RDD) in Spark, which is the basic abstraction of a fault-tolerant dataset in Spark. This allows the streaming data to be processed using any Spark code or library.
+the small batch of data is called DStream
+
+Spark streaming support two types of operations:
+
+i. Transformation Operations in Spark
+Similar to Spark RDDs, Spark transformations allow modification of the data from the input DStream. DStreams support many transformations that are available on normal Spark RDD’s. Some of the common ones are as follows.
+map(), flatMap(), filter(), repartition(numPartitions), union(otherStream), count(), reduce(), countByValue(), reduceByKey(func, [numTasks]), join(otherStream, [numTasks]), cogroup(otherStream, [numTasks]), transform(), updateStateByKey(), Window()
