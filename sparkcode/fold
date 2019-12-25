@@ -11,3 +11,10 @@ dummy = ('dummy',0.0)
 res = pair.fold(dummy,lambda a,b: b if a[1]<b[1] else a)
 print(res)
 
+# foldByKey
+# in this example, employees are grouped by department name, if you want to find the max salaries in a given department we can use following code:
+
+dept = [('cs',('jack',1000.0)),('cs',('bron',1200)),('phy',('sam',2200.0)),('phy',('ronaldo',500))]
+p = sc.parallelize(dept)
+res = p.foldByKey(('dummy',0.0), lambda a,b: b if a[1]<b[1] else b)
+res.collect()
