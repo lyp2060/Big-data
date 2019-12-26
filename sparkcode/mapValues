@@ -6,3 +6,12 @@ res = cur.mapValues(lambda a: a[0]/a[1]).collect()
 
 ## find how many uniq keys
 cur.keys().distinct().count()
+
+# given some customID and ticket prices, provide each custiom, how many tickets and total money they spent on them
+
+tickets = [('a',100),('b',20),('c',30),('a',20)]
+# slow
+res =sc.parallelize(tickets).groupByKey().map(lambda a:(a[0],(len(a[1]),sum(a[1])))).collect()
+
+#quick 
+res1 = sc.parallelize(tickets).mapValues(lambda a:(1,a)).reduceByKey(lambda a,b:(a[0]+b[0],a[1]+b[1])).collect()
