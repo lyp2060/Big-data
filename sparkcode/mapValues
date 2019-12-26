@@ -3,3 +3,6 @@
 event = [('a',1000),('a',1000),('b',200)]
 cur = sc.parallelize(event).mapValues(lambda a:(a,1)).reduceByKey(lambda a,b: (a[0]+b[0],a[1]+b[1]))
 res = cur.mapValues(lambda a: a[0]/a[1]).collect()
+
+## find how many uniq keys
+cur.keys().distinct().count()
