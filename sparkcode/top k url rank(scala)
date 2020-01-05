@@ -29,3 +29,6 @@ case class WebLog(host:String,
  
  urlRanks.select($"request",$"count").orderBy(desc("count"))
  
+ // note: there are the API operations not directly suported on streams:
+ // count, show, describe, limit, take(n), distinct, foreach, sort, mulitple stacked aggregations
+ 
