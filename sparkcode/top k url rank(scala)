@@ -31,4 +31,6 @@ case class WebLog(host:String,
  
  // note: there are the API operations not directly suported on streams:
  // count, show, describe, limit, take(n), distinct, foreach, sort, mulitple stacked aggregations
- 
+/ but we can count messages received per minute or count the number of devices of a certain type though we could not count the stream
+
+ val rankingURLStream = urlWebLogStream.groupBy($"request", window($"timestamp","5 minutes", "1 minutes")).count()
