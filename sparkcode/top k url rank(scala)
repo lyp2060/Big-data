@@ -1,0 +1,31 @@
+// what was the most popluar URL per day
+
+import java.sql.Timestamp
+case class WebLog(host:String,
+                timestamp: Timestamp,
+                request: String,
+                http_reply:Int,
+                bytes: Long)
+ val webLogSchema = Encoders.product[WebLog].schema ;// obtain a schema from the case class
+ val jsonStream = stream.select(from_json($"value", webLogSchema) as "record") ; // Transform the text value to JSON 
+ val webLogStream: Dataset[WebLog] = jsonStream.select("record.*").as[WebLog]; // Use the dataset API to transform the JSON to webLog objets
+ 
+ val urlExtractor = """^GET (.+) HTTP/\d.\d""".r
+ val allowedExtensions = Set(".html", ".htm","")
+ 
+ val contentPageLogs: String => Boolean = url => {
+  val ext = url.takeRight(5).dropWhile(c => c!= '/')
+  allowedExtensions.contains(ext)
+  }
+  
+ val rankingURLStream = urlWebLogStream.groupBy($"request", window($"timestamp","5 minutes", "1 minutes")).count()
+ 
+ // write to a sink
+ val query = rankingURLStream.writeStream
+ .queryName("urlRanks")
+ .outputMode("complete")
+ .format("memory")
+ .start()
+ 
+ urlRanks.select($"request",$"count").orderBy(desc("count"))
+ 
